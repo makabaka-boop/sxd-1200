@@ -17,6 +17,8 @@ export function useFilteredMaterials(
       if (filters.stage && m.stage !== filters.stage) return false;
       if (filters.status && m.status !== filters.status) return false;
       if (filters.version && m.version !== filters.version) return false;
+      if (filters.templateId === 'custom' && m.templateId) return false;
+      if (filters.templateId && filters.templateId !== 'custom' && m.templateId !== filters.templateId) return false;
       if (filters.keyword) {
         const kw = filters.keyword.toLowerCase();
         if (

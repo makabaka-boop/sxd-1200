@@ -17,6 +17,9 @@ export interface Material {
   status: MaterialStatus;
   remark: string;
   templateId?: string;
+  originalCopies?: number;
+  originalSpareCopies?: number;
+  templateExpectedCount?: number;
 }
 
 export interface TemplateMaterial {
@@ -53,6 +56,7 @@ export interface Filters {
   keyword: string;
   showAbnormal: boolean;
   checkType: CheckType | '';
+  templateId: string;
 }
 
 export const CHECK_TYPE_LABELS: Record<CheckType, string> = {

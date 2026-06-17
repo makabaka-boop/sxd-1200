@@ -1,16 +1,20 @@
-import { useState } from 'react';
-import { Calendar, Users, BookOpen, Hash, Layers, ChevronDown, Settings, Plus } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Calendar, Users, BookOpen, Hash, Layers, ChevronDown, Settings, Plus, Info } from 'lucide-react';
 import { useMaterialStore } from '@/store/useMaterialStore';
 import { TemplateManagerModal } from './TemplateManagerModal';
 import { CreateTemplateModal } from './CreateTemplateModal';
 
 export function CourseInfoCard() {
-  const { courseInfo, setCourseInfo, templates, applyTemplate, appliedTemplateId } = useMaterialStore();
+  const { courseInfo, setCourseInfo, templates, applyTemplate, appliedTemplateId, materials } = useMaterialStore();
   const [showTemplateManager, setShowTemplateManager] = useState(false);
   const [showCreateTemplate, setShowCreateTemplate] = useState(false);
   const [showTemplateDropdown, setShowTemplateDropdown] = useState(false);
 
   const appliedTemplate = templates.find((t) => t.id === appliedTemplateId);
+  const hasTemplateMaterials = useMemo(
+    () => materials.some((m) => m.templateId),
+    [materials]
+  );
 
   const handleApplyTemplate = (templateId: string) => {
     applyTemplate(templateId);
@@ -181,6 +185,12 @@ export function CourseInfoCard() {
             />
             <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           </div>
+          {hasTemplateMaterials && (
+            <p className="mt-1.5 flex items-center gap-1 text-xs text-primary-600">
+              <Info className="w-3 h-3" />
+              修改后将自动换算模板资料的份数
+            </p>
+          )}
         </div>
       </div>
 

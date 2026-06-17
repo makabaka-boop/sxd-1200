@@ -142,6 +142,9 @@ export function parseImportedJson(jsonString: string): ImportedData {
 
     const rawStatus = typeof m.status === 'string' ? m.status : '';
     const templateId = typeof m.templateId === 'string' && m.templateId.trim() ? m.templateId : undefined;
+    const originalCopies = typeof m.originalCopies === 'number' && m.originalCopies >= 0 ? m.originalCopies : undefined;
+    const originalSpareCopies = typeof m.originalSpareCopies === 'number' && m.originalSpareCopies >= 0 ? m.originalSpareCopies : undefined;
+    const templateExpectedCount = typeof m.templateExpectedCount === 'number' && m.templateExpectedCount >= 0 ? m.templateExpectedCount : undefined;
 
     validMaterials.push({
       id: typeof m.id === 'string' && m.id.trim() ? m.id : generateId(),
@@ -153,6 +156,9 @@ export function parseImportedJson(jsonString: string): ImportedData {
       status: validStatuses.includes(rawStatus) ? (rawStatus as MaterialStatus) : 'pending',
       remark: typeof m.remark === 'string' ? m.remark : '',
       templateId,
+      originalCopies,
+      originalSpareCopies,
+      templateExpectedCount,
     });
   });
 

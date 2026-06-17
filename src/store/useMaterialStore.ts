@@ -11,6 +11,7 @@ import type {
 import { generateId } from '@/utils/idGenerator';
 import { checkDuplicates } from '@/utils/importJson';
 import { STAGES } from '@/types';
+import { calculateCopiesForExpectedCount, recalculateMaterialCopies } from '@/utils/copiesCalculator';
 
 interface ImportResult {
   importedCount: number;
@@ -60,6 +61,7 @@ interface MaterialStore {
   setAppliedTemplateId: (id: string | null) => void;
   setTemplates: (templates: CourseTemplate[]) => void;
   createTemplateFromCurrent: (name: string, classType: string, copiesRule: string, remark: string) => void;
+  recalculateCopiesForExpectedCount: () => void;
 }
 
 const today = new Date().toISOString().split('T')[0];
@@ -134,6 +136,7 @@ export const useMaterialStore = create<MaterialStore>((set, get) => ({
     keyword: '',
     showAbnormal: false,
     checkType: '',
+    templateId: '',
   },
   previousCourseMaterials: [],
   templates: [],
@@ -142,9 +145,44 @@ export const useMaterialStore = create<MaterialStore>((set, get) => ({
   appliedTemplateId: null,
 
   setCourseInfo: (info) =>
-    set((state) => ({
-      courseInfo: { ...state.courseInfo, ...info },
-    })),
+    set((state) => {
+      const newCourseInfo = { ...state.courseInfo, ...info };
+      const expectedCountChanged =
+        info.expectedCount !== undefined &&
+        info.expectedCount !== state.courseInfo.expectedCount;
+
+      if (!expectedCountChanged) {
+        return { courseInfo: newCourseInfo };
+      }
+
+      const { templates, materials } = state;
+      const updatedMaterials = materials.map((m) => {
+        if (!m.templateId || m.templateExpectedCount === undefined) return m;
+        const template = templates.find((t) => t.id === m.templateId);
+        if (!template) return m;
+
+        const recalculated = recalculateMaterialCopies(
+          {
+            ...m,
+            copies: m.originalCopies ?? m.copies,
+            spareCopies: m.originalSpareCopies ?? m.spareCopies,
+          },
+          m.templateExpectedCount,
+          newCourseInfo.expectedCount
+        );
+
+        return {
+          ...m,
+          copies: recalculated.copies,
+          spareCopies: recalculated.spareCopies,
+        };
+      });
+
+      return {
+        courseInfo: newCourseInfo,
+        materials: updatedMaterials,
+      };
+    }),
 
   addMaterial: (material) =>
     set((state) => ({
@@ -267,6 +305,7 @@ export const useMaterialStore = create<MaterialStore>((set, get) => ({
       keyword: '',
       showAbnormal: false,
       checkType: '',
+      templateId: '',
     };
 
     if (mode === 'overwrite') {
@@ -341,7 +380,7 @@ export const useMaterialStore = create<MaterialStore>((set, get) => ({
   },
 
   applyTemplate: (templateId) => {
-    const { templates, materials } = get();
+    const { templates, materials, courseInfo } = get();
     const template = templates.find((t) => t.id === templateId);
     if (!template) return;
 
@@ -349,14 +388,29 @@ export const useMaterialStore = create<MaterialStore>((set, get) => ({
       materials.map((m) => `${m.name}-${m.version}-${m.stage}`)
     );
 
+    const templateExpectedCount = template.courseInfo?.expectedCount ?? courseInfo.expectedCount;
+    const currentExpectedCount = courseInfo.expectedCount;
+
     const newMaterials: Material[] = template.materials
       .filter((m) => !existingKeys.has(`${m.name}-${m.version}-${m.stage}`))
-      .map((m) => ({
-        ...m,
-        id: generateId(),
-        status: 'pending' as MaterialStatus,
-        templateId: templateId,
-      }));
+      .map((m) => {
+        const calculated = calculateCopiesForExpectedCount(
+          m,
+          templateExpectedCount,
+          currentExpectedCount
+        );
+        return {
+          ...m,
+          id: generateId(),
+          status: 'pending' as MaterialStatus,
+          templateId: templateId,
+          copies: calculated.copies,
+          spareCopies: calculated.spareCopies,
+          originalCopies: m.copies,
+          originalSpareCopies: m.spareCopies,
+          templateExpectedCount,
+        };
+      });
 
     if (newMaterials.length === 0 && materials.length > 0) {
       alert('所有模板资料已存在，无需重复添加。');
@@ -437,5 +491,34 @@ export const useMaterialStore = create<MaterialStore>((set, get) => ({
     }));
 
     alert(`模板"${name}"已创建成功！`);
+  },
+
+  recalculateCopiesForExpectedCount: () => {
+    const { materials, templates, courseInfo } = get();
+    const currentExpectedCount = courseInfo.expectedCount;
+
+    const updatedMaterials = materials.map((m) => {
+      if (!m.templateId || m.templateExpectedCount === undefined) return m;
+      const template = templates.find((t) => t.id === m.templateId);
+      if (!template) return m;
+
+      const recalculated = recalculateMaterialCopies(
+        {
+          ...m,
+          copies: m.originalCopies ?? m.copies,
+          spareCopies: m.originalSpareCopies ?? m.spareCopies,
+        },
+        m.templateExpectedCount,
+        currentExpectedCount
+      );
+
+      return {
+        ...m,
+        copies: recalculated.copies,
+        spareCopies: recalculated.spareCopies,
+      };
+    });
+
+    set({ materials: updatedMaterials });
   },
 }));

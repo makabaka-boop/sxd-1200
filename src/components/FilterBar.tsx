@@ -1,15 +1,16 @@
-import { Search, Filter, AlertTriangle } from 'lucide-react';
+import { Search, Filter, AlertTriangle, Layers } from 'lucide-react';
 import { useMaterialStore } from '@/store/useMaterialStore';
 import { STAGES, STATUS_LABELS, CHECK_TYPE_LABELS } from '@/types';
 import type { MaterialStatus, CheckType } from '@/types';
 import { useMaterialChecks } from '@/hooks/useMaterialChecks';
 
 export function FilterBar() {
-  const { filters, setFilters, materials, courseInfo, clearHighlightedIds } = useMaterialStore();
+  const { filters, setFilters, materials, courseInfo, clearHighlightedIds, templates } = useMaterialStore();
   const { abnormalMaterialIds, getIdsByCheckType } = useMaterialChecks(materials, courseInfo);
 
   const versions = Array.from(new Set(materials.map((m) => m.version))).filter(Boolean);
   const checkTypes = Object.keys(CHECK_TYPE_LABELS) as CheckType[];
+  const hasTemplateMaterials = materials.some((m) => m.templateId);
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
@@ -70,6 +71,24 @@ export function FilterBar() {
           ))}
         </select>
 
+        {hasTemplateMaterials && (
+          <select
+            value={filters.templateId}
+            onChange={(e) => setFilters({ templateId: e.target.value })}
+            className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
+          >
+            <option value="">全部来源</option>
+            <option value="custom">
+              手动添加
+            </option>
+            {templates.map((t) => (
+              <option key={t.id} value={t.id}>
+                模板：{t.name}
+              </option>
+            ))}
+          </select>
+        )}
+
         <select
           value={filters.checkType}
           onChange={(e) => {
@@ -109,7 +128,7 @@ export function FilterBar() {
           )}
         </button>
 
-        {(filters.keyword || filters.stage || filters.status || filters.version || filters.showAbnormal || filters.checkType) && (
+        {(filters.keyword || filters.stage || filters.status || filters.version || filters.showAbnormal || filters.checkType || filters.templateId) && (
           <button
             onClick={() => {
               setFilters({
@@ -119,6 +138,7 @@ export function FilterBar() {
                 version: '',
                 showAbnormal: false,
                 checkType: '',
+                templateId: '',
               });
               clearHighlightedIds();
             }}

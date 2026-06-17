@@ -1,4 +1,4 @@
-import { Edit2, Trash2, ChevronUp, ChevronDown, AlertCircle } from 'lucide-react';
+import { Edit2, Trash2, ChevronUp, ChevronDown, AlertCircle, Layers } from 'lucide-react';
 import { useMaterialStore } from '@/store/useMaterialStore';
 import { useFilteredMaterials } from '@/hooks/useFilteredMaterials';
 import { useMaterialChecks } from '@/hooks/useMaterialChecks';
@@ -21,6 +21,7 @@ export function MaterialTable({ onEdit }: MaterialTableProps) {
     updateMaterial,
     deleteMaterial,
     filters,
+    templates,
   } = useMaterialStore();
 
   const { abnormalMaterialIds, getIdsByCheckType } = useMaterialChecks(materials, courseInfo);
@@ -64,6 +65,9 @@ export function MaterialTable({ onEdit }: MaterialTableProps) {
                 资料名称
               </th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                来源
+              </th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
                 版本
               </th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
@@ -90,7 +94,7 @@ export function MaterialTable({ onEdit }: MaterialTableProps) {
             {filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={9}
+                  colSpan={10}
                   className="px-4 py-12 text-center text-slate-400"
                 >
                   暂无资料数据
@@ -129,6 +133,16 @@ export function MaterialTable({ onEdit }: MaterialTableProps) {
                           <AlertCircle className="w-4 h-4 text-amber-500" />
                         )}
                       </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {material.templateId ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-violet-700 bg-violet-50 px-2 py-1 rounded border border-violet-200">
+                          <Layers className="w-3 h-3" />
+                          {templates.find((t) => t.id === material.templateId)?.name || '模板'}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400">手动</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-sm text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
