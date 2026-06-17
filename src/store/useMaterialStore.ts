@@ -368,11 +368,23 @@ export const useMaterialStore = create<MaterialStore>((set, get) => ({
       alert(`已跳过 ${skipped} 项重复资料，成功套用 ${newMaterials.length} 项。`);
     }
 
+    const { courseInfo: templateCourseInfo } = template;
+    const courseInfoUpdates: Partial<CourseInfo> = {};
+    if (templateCourseInfo) {
+      if (templateCourseInfo.name) {
+        courseInfoUpdates.name = templateCourseInfo.name;
+      }
+      if (templateCourseInfo.expectedCount > 0) {
+        courseInfoUpdates.expectedCount = templateCourseInfo.expectedCount;
+      }
+    }
+
     set((state) => ({
       materials:
         materials.length === 0
           ? newMaterials
           : [...state.materials, ...newMaterials],
+      courseInfo: { ...state.courseInfo, ...courseInfoUpdates },
       appliedTemplateId: templateId,
     }));
   },
@@ -382,7 +394,7 @@ export const useMaterialStore = create<MaterialStore>((set, get) => ({
   setTemplates: (templates) => set({ templates }),
 
   createTemplateFromCurrent: (name, classType, copiesRule, remark) => {
-    const { materials } = get();
+    const { materials, courseInfo } = get();
     const activeMaterials = materials.filter((m) => m.status !== 'cancelled');
 
     if (activeMaterials.length === 0) {
@@ -412,6 +424,10 @@ export const useMaterialStore = create<MaterialStore>((set, get) => ({
       materials: templateMaterials,
       copiesRule,
       remark,
+      courseInfo: {
+        name: courseInfo.name,
+        expectedCount: courseInfo.expectedCount,
+      },
       createdAt: now,
       updatedAt: now,
     };

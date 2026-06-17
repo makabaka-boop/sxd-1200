@@ -28,6 +28,11 @@ export interface TemplateMaterial {
   remark: string;
 }
 
+export interface TemplateCourseInfo {
+  name: string;
+  expectedCount: number;
+}
+
 export interface CourseTemplate {
   id: string;
   name: string;
@@ -36,6 +41,7 @@ export interface CourseTemplate {
   materials: TemplateMaterial[];
   copiesRule: string;
   remark: string;
+  courseInfo: TemplateCourseInfo;
   createdAt: string;
   updatedAt: string;
 }

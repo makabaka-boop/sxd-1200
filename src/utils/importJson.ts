@@ -53,6 +53,20 @@ function parseTemplates(templatesData: unknown): CourseTemplate[] {
       ? t.defaultStages.filter((s): s is string => typeof s === 'string')
       : [];
 
+    const templateCi =
+      t.courseInfo && typeof t.courseInfo === 'object' && !Array.isArray(t.courseInfo)
+        ? (t.courseInfo as Record<string, unknown>)
+        : null;
+
+    const courseInfo = {
+      name:
+        templateCi && typeof templateCi.name === 'string' ? templateCi.name.trim() : '',
+      expectedCount:
+        templateCi && typeof templateCi.expectedCount === 'number' && templateCi.expectedCount >= 0
+          ? templateCi.expectedCount
+          : 0,
+    };
+
     const now = new Date().toISOString();
 
     validTemplates.push({
@@ -63,6 +77,7 @@ function parseTemplates(templatesData: unknown): CourseTemplate[] {
       materials,
       copiesRule: typeof t.copiesRule === 'string' ? t.copiesRule.trim() : '',
       remark: typeof t.remark === 'string' ? t.remark : '',
+      courseInfo,
       createdAt: typeof t.createdAt === 'string' && t.createdAt.trim() ? t.createdAt : now,
       updatedAt: typeof t.updatedAt === 'string' && t.updatedAt.trim() ? t.updatedAt : now,
     });

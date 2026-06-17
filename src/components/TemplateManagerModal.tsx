@@ -29,6 +29,8 @@ export function TemplateManagerModal({
     deleteTemplate,
     updateTemplate,
     applyTemplate,
+    createTemplate,
+    courseInfo,
   } = useMaterialStore();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<CourseTemplate | null>(null);
@@ -100,6 +102,20 @@ export function TemplateManagerModal({
         defaultStages: formData.defaultStages,
       });
       alert('模板已更新');
+    } else if (isCreating) {
+      createTemplate({
+        name: formData.name.trim(),
+        classType: formData.classType.trim(),
+        copiesRule: formData.copiesRule.trim(),
+        remark: formData.remark.trim(),
+        defaultStages: formData.defaultStages,
+        materials: [],
+        courseInfo: {
+          name: courseInfo.name,
+          expectedCount: courseInfo.expectedCount,
+        },
+      });
+      alert('模板已创建');
     }
     setEditingTemplate(null);
     setIsCreating(false);
@@ -342,7 +358,31 @@ export function TemplateManagerModal({
 
                   {expandedId === template.id && (
                     <div className="border-t border-slate-100 p-4 bg-slate-50">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        {template.courseInfo && (
+                          <>
+                            {template.courseInfo.name && (
+                              <div>
+                                <p className="text-xs text-slate-500 mb-1">
+                                  课程名称
+                                </p>
+                                <p className="text-sm text-slate-700">
+                                  {template.courseInfo.name}
+                                </p>
+                              </div>
+                            )}
+                            {template.courseInfo.expectedCount > 0 && (
+                              <div>
+                                <p className="text-xs text-slate-500 mb-1">
+                                  预计人数
+                                </p>
+                                <p className="text-sm text-slate-700">
+                                  {template.courseInfo.expectedCount} 人
+                                </p>
+                              </div>
+                            )}
+                          </>
+                        )}
                         {template.copiesRule && (
                           <div>
                             <p className="text-xs text-slate-500 mb-1">
@@ -354,7 +394,7 @@ export function TemplateManagerModal({
                           </div>
                         )}
                         {template.defaultStages.length > 0 && (
-                          <div>
+                          <div className="md:col-span-3">
                             <p className="text-xs text-slate-500 mb-1">
                               教学环节
                             </p>
