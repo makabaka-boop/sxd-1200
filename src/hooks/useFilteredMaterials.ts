@@ -1,12 +1,18 @@
 import { useMemo } from 'react';
-import type { Material, Filters } from '@/types';
+import type { Material, Filters, CheckType } from '@/types';
 
 export function useFilteredMaterials(
   materials: Material[],
   filters: Filters,
-  abnormalIds: Set<string>
+  abnormalIds: Set<string>,
+  getIdsByCheckType: (type: CheckType | '') => Set<string>
 ) {
   const filtered = useMemo(() => {
+    let checkTypeIds: Set<string> | null = null;
+    if (filters.checkType) {
+      checkTypeIds = getIdsByCheckType(filters.checkType);
+    }
+
     return materials.filter((m) => {
       if (filters.stage && m.stage !== filters.stage) return false;
       if (filters.status && m.status !== filters.status) return false;
@@ -21,9 +27,10 @@ export function useFilteredMaterials(
         }
       }
       if (filters.showAbnormal && !abnormalIds.has(m.id)) return false;
+      if (checkTypeIds && !checkTypeIds.has(m.id)) return false;
       return true;
     });
-  }, [materials, filters, abnormalIds]);
+  }, [materials, filters, abnormalIds, getIdsByCheckType]);
 
   return filtered;
 }

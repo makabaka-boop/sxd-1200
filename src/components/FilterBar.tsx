@@ -1,14 +1,22 @@
-import { Search, Filter, AlertTriangle } from 'lucide-react';
+import { Search, Filter, AlertTriangle, Copy, Layers, FileText, MessageSquare } from 'lucide-react';
 import { useMaterialStore } from '@/store/useMaterialStore';
-import { STAGES, STATUS_LABELS } from '@/types';
-import type { MaterialStatus } from '@/types';
+import { STAGES, STATUS_LABELS, CHECK_TYPE_LABELS } from '@/types';
+import type { MaterialStatus, CheckType } from '@/types';
 import { useMaterialChecks } from '@/hooks/useMaterialChecks';
 
+const checkTypeIcons: Record<CheckType, React.ReactNode> = {
+  copies: <Copy className="w-4 h-4" />,
+  version: <Layers className="w-4 h-4" />,
+  duplicate: <FileText className="w-4 h-4" />,
+  remark: <MessageSquare className="w-4 h-4" />,
+};
+
 export function FilterBar() {
-  const { filters, setFilters, materials, courseInfo } = useMaterialStore();
-  const { abnormalMaterialIds } = useMaterialChecks(materials, courseInfo);
+  const { filters, setFilters, materials, courseInfo, clearHighlightedIds } = useMaterialStore();
+  const { abnormalMaterialIds, getIdsByCheckType } = useMaterialChecks(materials, courseInfo);
 
   const versions = Array.from(new Set(materials.map((m) => m.version))).filter(Boolean);
+  const checkTypes = Object.keys(CHECK_TYPE_LABELS) as CheckType[];
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
@@ -69,8 +77,30 @@ export function FilterBar() {
           ))}
         </select>
 
+        <select
+          value={filters.checkType}
+          onChange={(e) => {
+            setFilters({ checkType: e.target.value as CheckType | '' });
+            clearHighlightedIds();
+          }}
+          className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
+        >
+          <option value="">全部异常类型</option>
+          {checkTypes.map((type) => {
+            const count = getIdsByCheckType(type).size;
+            return (
+              <option key={type} value={type} disabled={count === 0}>
+                {CHECK_TYPE_LABELS[type]} {count > 0 ? `(${count})` : '(0)'}
+              </option>
+            );
+          })}
+        </select>
+
         <button
-          onClick={() => setFilters({ showAbnormal: !filters.showAbnormal })}
+          onClick={() => {
+            setFilters({ showAbnormal: !filters.showAbnormal });
+            clearHighlightedIds();
+          }}
           className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
             filters.showAbnormal
               ? 'bg-amber-100 text-amber-700 border border-amber-300'
@@ -86,17 +116,19 @@ export function FilterBar() {
           )}
         </button>
 
-        {(filters.keyword || filters.stage || filters.status || filters.version || filters.showAbnormal) && (
+        {(filters.keyword || filters.stage || filters.status || filters.version || filters.showAbnormal || filters.checkType) && (
           <button
-            onClick={() =>
+            onClick={() => {
               setFilters({
                 keyword: '',
                 stage: '',
                 status: '',
                 version: '',
                 showAbnormal: false,
-              })
-            }
+                checkType: '',
+              });
+              clearHighlightedIds();
+            }}
             className="text-sm text-slate-500 hover:text-slate-700 underline"
           >
             清除筛选

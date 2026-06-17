@@ -28,7 +28,14 @@ const checkLabels: Record<CheckType, string> = {
 };
 
 export function AlertPanel() {
-  const { materials, courseInfo, setFilters, clearSelection } = useMaterialStore();
+  const {
+    materials,
+    courseInfo,
+    setFilters,
+    clearSelection,
+    setHighlightedIds,
+    setView,
+  } = useMaterialStore();
   const { checkResults, hasErrors, hasWarnings } = useMaterialChecks(
     materials,
     courseInfo
@@ -36,9 +43,31 @@ export function AlertPanel() {
 
   const [isExpanded, setIsExpanded] = useState(true);
 
-  const handleJumpTo = (materialIds: string[]) => {
+  const handleJumpTo = (materialIds: string[], checkType: string) => {
     clearSelection();
-    setFilters({ showAbnormal: true, keyword: '', stage: '', status: '', version: '' });
+    setView('list');
+    setFilters({
+      showAbnormal: false,
+      keyword: '',
+      stage: '',
+      status: '',
+      version: '',
+      checkType: checkType as any,
+    });
+    setHighlightedIds(materialIds);
+
+    setTimeout(() => {
+      const firstRow = document.querySelector(
+        `[data-material-id="${materialIds[0]}"]`
+      );
+      if (firstRow) {
+        firstRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+
+    setTimeout(() => {
+      setHighlightedIds([]);
+    }, 3000);
   };
 
   if (checkResults.length === 0) {
@@ -170,7 +199,7 @@ export function AlertPanel() {
                   </p>
                 </div>
                 <button
-                  onClick={() => handleJumpTo(result.materialIds)}
+                  onClick={() => handleJumpTo(result.materialIds, result.type)}
                   className={`text-xs font-medium px-2.5 py-1 rounded-md transition-colors ${
                     result.severity === 'error'
                       ? 'bg-rose-100 text-rose-700 hover:bg-rose-200'

@@ -63,7 +63,6 @@ export function BatchActionBar({ onAdd }: BatchActionBarProps) {
 
   const handleSaveAsPrevious = () => {
     saveAsPrevious();
-    alert('已保存为上一场课程资料');
   };
 
   return (

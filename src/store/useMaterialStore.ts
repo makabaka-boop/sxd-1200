@@ -1,14 +1,16 @@
 import { create } from 'zustand';
-import type { CourseInfo, Material, MaterialStatus, Filters } from '@/types';
+import type { CourseInfo, Material, MaterialStatus, Filters, CheckType } from '@/types';
 import { generateId } from '@/utils/idGenerator';
 
 interface MaterialStore {
   courseInfo: CourseInfo;
   materials: Material[];
   selectedIds: string[];
+  highlightedIds: string[];
   filters: Filters;
   previousCourseMaterials: Material[];
   view: 'list' | 'checklist';
+  hasCopiedFromPrevious: boolean;
 
   setCourseInfo: (info: Partial<CourseInfo>) => void;
   addMaterial: (material: Omit<Material, 'id'>) => void;
@@ -18,12 +20,15 @@ interface MaterialStore {
   selectAll: (ids: string[]) => void;
   clearSelection: () => void;
   setFilters: (filters: Partial<Filters>) => void;
+  setHighlightedIds: (ids: string[]) => void;
+  clearHighlightedIds: () => void;
   batchUpdateStatus: (ids: string[], status: MaterialStatus) => void;
   batchAdjustCopies: (ids: string[], delta: number) => void;
   batchDelete: (ids: string[]) => void;
   copyFromPrevious: () => void;
   saveAsPrevious: () => void;
   setView: (view: 'list' | 'checklist') => void;
+  resetHasCopiedFlag: () => void;
 }
 
 const today = new Date().toISOString().split('T')[0];
@@ -90,15 +95,18 @@ export const useMaterialStore = create<MaterialStore>((set, get) => ({
   },
   materials: initialMaterials,
   selectedIds: [],
+  highlightedIds: [],
   filters: {
     stage: '',
     status: '',
     version: '',
     keyword: '',
     showAbnormal: false,
+    checkType: '',
   },
   previousCourseMaterials: [],
   view: 'list',
+  hasCopiedFromPrevious: false,
 
   setCourseInfo: (info) =>
     set((state) => ({
@@ -139,6 +147,10 @@ export const useMaterialStore = create<MaterialStore>((set, get) => ({
       filters: { ...state.filters, ...filters },
     })),
 
+  setHighlightedIds: (ids) => set({ highlightedIds: ids }),
+
+  clearHighlightedIds: () => set({ highlightedIds: [] }),
+
   batchUpdateStatus: (ids, status) =>
     set((state) => ({
       materials: state.materials.map((m) =>
@@ -162,25 +174,55 @@ export const useMaterialStore = create<MaterialStore>((set, get) => ({
     })),
 
   copyFromPrevious: () => {
-    const { previousCourseMaterials } = get();
+    const { previousCourseMaterials, hasCopiedFromPrevious, materials } = get();
     if (previousCourseMaterials.length === 0) return;
 
-    const newMaterials = previousCourseMaterials.map((m) => ({
-      ...m,
-      id: generateId(),
-      status: 'pending' as MaterialStatus,
-      remark: '',
-    }));
+    if (hasCopiedFromPrevious) {
+      const confirmed = confirm(
+        '已复制过上一场课程资料，重复复制会导致资料重复。确定要继续复制吗？'
+      );
+      if (!confirmed) return;
+    }
+
+    const existingKeys = new Set(
+      materials.map((m) => `${m.name}-${m.version}-${m.stage}`)
+    );
+
+    const newMaterials = previousCourseMaterials
+      .filter((m) => !existingKeys.has(`${m.name}-${m.version}-${m.stage}`))
+      .map((m) => ({
+        ...m,
+        id: generateId(),
+        status: 'pending' as MaterialStatus,
+        remark: '',
+      }));
+
+    if (newMaterials.length === 0) {
+      alert('所有资料已存在，无需重复复制。');
+      return;
+    }
+
+    const skipped = previousCourseMaterials.length - newMaterials.length;
+    if (skipped > 0) {
+      alert(`已跳过 ${skipped} 项重复资料，成功复制 ${newMaterials.length} 项。`);
+    }
 
     set((state) => ({
       materials: [...state.materials, ...newMaterials],
+      hasCopiedFromPrevious: true,
     }));
   },
 
   saveAsPrevious: () => {
     const { materials } = get();
-    set({ previousCourseMaterials: [...materials] });
+    set({
+      previousCourseMaterials: [...materials],
+      hasCopiedFromPrevious: false,
+    });
+    alert('已保存为上一场课程资料');
   },
 
   setView: (view) => set({ view }),
+
+  resetHasCopiedFlag: () => set({ hasCopiedFromPrevious: false }),
 }));

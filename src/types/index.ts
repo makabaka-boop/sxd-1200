@@ -24,7 +24,15 @@ export interface Filters {
   version: string;
   keyword: string;
   showAbnormal: boolean;
+  checkType: CheckType | '';
 }
+
+export const CHECK_TYPE_LABELS: Record<CheckType, string> = {
+  copies: '份数不足',
+  version: '版本混用',
+  duplicate: '资料重复',
+  remark: '备注缺失',
+};
 
 export type CheckType = 'copies' | 'version' | 'duplicate' | 'remark';
 

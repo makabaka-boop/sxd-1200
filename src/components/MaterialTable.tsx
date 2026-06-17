@@ -15,6 +15,7 @@ export function MaterialTable({ onEdit }: MaterialTableProps) {
     materials,
     courseInfo,
     selectedIds,
+    highlightedIds,
     toggleSelect,
     selectAll,
     clearSelection,
@@ -23,8 +24,8 @@ export function MaterialTable({ onEdit }: MaterialTableProps) {
     filters,
   } = useMaterialStore();
 
-  const { abnormalMaterialIds } = useMaterialChecks(materials, courseInfo);
-  const filtered = useFilteredMaterials(materials, filters, abnormalMaterialIds);
+  const { abnormalMaterialIds, getIdsByCheckType } = useMaterialChecks(materials, courseInfo);
+  const filtered = useFilteredMaterials(materials, filters, abnormalMaterialIds, getIdsByCheckType);
 
   const allSelected =
     filtered.length > 0 && filtered.every((m) => selectedIds.includes(m.id));
@@ -99,12 +100,18 @@ export function MaterialTable({ onEdit }: MaterialTableProps) {
             ) : (
               filtered.map((material) => {
                 const isAbnormal = abnormalMaterialIds.has(material.id);
+                const isHighlighted = highlightedIds.includes(material.id);
                 return (
                   <tr
                     key={material.id}
-                    className={`hover:bg-slate-50 transition-colors ${
+                    data-material-id={material.id}
+                    className={`hover:bg-slate-50 transition-all duration-300 ${
                       material.status === 'cancelled' ? 'opacity-50' : ''
-                    } ${isAbnormal ? 'bg-amber-50/30' : ''}`}
+                    } ${isAbnormal ? 'bg-amber-50/30' : ''} ${
+                      isHighlighted
+                        ? 'bg-primary-100/80 ring-2 ring-primary-400 ring-inset'
+                        : ''
+                    }`}
                   >
                     <td className="px-4 py-3">
                       <input

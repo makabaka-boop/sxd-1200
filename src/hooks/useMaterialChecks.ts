@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { Material, CourseInfo, CheckResult } from '@/types';
+import type { Material, CourseInfo, CheckResult, CheckType } from '@/types';
 
 export function useMaterialChecks(materials: Material[], courseInfo: CourseInfo) {
   const checkResults = useMemo(() => {
@@ -108,9 +108,27 @@ export function useMaterialChecks(materials: Material[], courseInfo: CourseInfo)
     return ids;
   }, [checkResults]);
 
+  const abnormalIdsByType = useMemo(() => {
+    const map = new Map<CheckType, Set<string>>();
+    checkResults.forEach((r) => {
+      if (!map.has(r.type)) {
+        map.set(r.type, new Set());
+      }
+      r.materialIds.forEach((id) => map.get(r.type)!.add(id));
+    });
+    return map;
+  }, [checkResults]);
+
+  const getIdsByCheckType = (type: CheckType | ''): Set<string> => {
+    if (!type) return abnormalMaterialIds;
+    return abnormalIdsByType.get(type) || new Set();
+  };
+
   return {
     checkResults,
     abnormalMaterialIds,
+    abnormalIdsByType,
+    getIdsByCheckType,
     hasErrors: checkResults.some((r) => r.severity === 'error'),
     hasWarnings: checkResults.some((r) => r.severity === 'warning'),
   };
