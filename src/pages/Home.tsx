@@ -89,6 +89,7 @@ export default function Home() {
     setShowImportPreview(false);
     setImportedData(null);
     setSuccessMessage(message);
+    setView('list');
     setTimeout(() => setSuccessMessage(''), 4000);
   };
 

@@ -9,51 +9,90 @@ import type {
 import { generateId } from './idGenerator';
 
 export function parseImportedJson(jsonString: string): ImportedData {
-  const data = JSON.parse(jsonString);
+  let data: unknown;
+  try {
+    data = JSON.parse(jsonString);
+  } catch {
+    throw new Error('文件内容不是合法的 JSON 格式');
+  }
 
-  if (!data || typeof data !== 'object') {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
     throw new Error('文件格式无效：根节点必须是对象');
   }
 
-  if (!data.courseInfo || typeof data.courseInfo !== 'object') {
+  const root = data as Record<string, unknown>;
+
+  if (!root.courseInfo || typeof root.courseInfo !== 'object' || Array.isArray(root.courseInfo)) {
     throw new Error('文件格式无效：缺少 courseInfo 字段');
   }
 
-  if (!Array.isArray(data.materials)) {
+  if (!Array.isArray(root.materials)) {
     throw new Error('文件格式无效：缺少 materials 数组');
   }
 
+  if (root.materials.length === 0) {
+    throw new Error('文件格式无效：materials 数组为空，无资料可导入');
+  }
+
+  const ci = root.courseInfo as Record<string, unknown>;
   const courseInfo: CourseInfo = {
-    name: data.courseInfo.name || '',
-    date: data.courseInfo.date || new Date().toISOString().split('T')[0],
-    classCode: data.courseInfo.classCode || '',
-    expectedCount: data.courseInfo.expectedCount || 0,
+    name: typeof ci.name === 'string' && ci.name.trim() ? ci.name.trim() : '',
+    date: typeof ci.date === 'string' && ci.date.trim() ? ci.date.trim() : '',
+    classCode: typeof ci.classCode === 'string' && ci.classCode.trim() ? ci.classCode.trim() : '',
+    expectedCount: typeof ci.expectedCount === 'number' && ci.expectedCount >= 0 ? ci.expectedCount : 0,
   };
 
   const validStatuses: string[] = ['pending', 'ready', 'reprint', 'cancelled'];
-  const materials: Material[] = data.materials.map((m: Record<string, unknown>, index: number) => {
-    if (!m || typeof m !== 'object') {
-      throw new Error(`文件格式无效：第 ${index + 1} 项资料格式错误`);
+  const validMaterials: Material[] = [];
+  const invalidItems: string[] = [];
+
+  (root.materials as unknown[]).forEach((item, index) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      invalidItems.push(`第 ${index + 1} 项不是对象`);
+      return;
     }
+    const m = item as Record<string, unknown>;
+
+    const name = typeof m.name === 'string' ? m.name.trim() : '';
+    const version = typeof m.version === 'string' ? m.version.trim() : '';
+    const stage = typeof m.stage === 'string' ? m.stage.trim() : '';
+
+    if (!name) {
+      invalidItems.push(`第 ${index + 1} 项缺少资料名称`);
+      return;
+    }
+
     const rawStatus = typeof m.status === 'string' ? m.status : '';
-    return {
-      id: typeof m.id === 'string' ? m.id : generateId(),
-      name: typeof m.name === 'string' ? m.name : '',
-      version: typeof m.version === 'string' ? m.version : '',
-      copies: typeof m.copies === 'number' ? m.copies : 0,
-      spareCopies: typeof m.spareCopies === 'number' ? m.spareCopies : 0,
-      stage: typeof m.stage === 'string' ? m.stage : '',
-      status: validStatuses.includes(rawStatus)
-        ? (rawStatus as MaterialStatus)
-        : 'pending',
+
+    validMaterials.push({
+      id: typeof m.id === 'string' && m.id.trim() ? m.id : generateId(),
+      name,
+      version,
+      copies: typeof m.copies === 'number' && m.copies >= 0 ? m.copies : 0,
+      spareCopies: typeof m.spareCopies === 'number' && m.spareCopies >= 0 ? m.spareCopies : 0,
+      stage,
+      status: validStatuses.includes(rawStatus) ? (rawStatus as MaterialStatus) : 'pending',
       remark: typeof m.remark === 'string' ? m.remark : '',
-    };
+    });
   });
+
+  if (validMaterials.length === 0) {
+    throw new Error(
+      `文件中无有效资料可导入${invalidItems.length > 0 ? `（${invalidItems.join('；')}）` : ''}`
+    );
+  }
+
+  if (invalidItems.length > 0) {
+    const skipped = (root.materials as unknown[]).length - validMaterials.length;
+    throw new Error(
+      `文件中存在 ${skipped} 项异常数据已跳过：${invalidItems.slice(0, 5).join('；')}${invalidItems.length > 5 ? '...' : ''}。请修正后重新导出，或确认仅导入有效数据。`
+    );
+  }
 
   return {
     courseInfo,
-    materials,
-    exportedAt: data.exportedAt || new Date().toISOString(),
+    materials: validMaterials,
+    exportedAt: typeof root.exportedAt === 'string' && root.exportedAt.trim() ? root.exportedAt : new Date().toISOString(),
   };
 }
 

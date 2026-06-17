@@ -245,6 +245,15 @@ export const useMaterialStore = create<MaterialStore>((set, get) => ({
   resetHasCopiedFlag: () => set({ hasCopiedFromPrevious: false }),
 
   importMaterials: (courseInfo, materials, mode) => {
+    const resetFilters: Filters = {
+      stage: '',
+      status: '',
+      version: '',
+      keyword: '',
+      showAbnormal: false,
+      checkType: '',
+    };
+
     if (mode === 'overwrite') {
       const newMaterials = materials.map((m) => ({
         ...m,
@@ -255,6 +264,7 @@ export const useMaterialStore = create<MaterialStore>((set, get) => ({
         materials: newMaterials,
         selectedIds: [],
         highlightedIds: [],
+        filters: resetFilters,
       });
       return {
         importedCount: newMaterials.length,
@@ -272,8 +282,10 @@ export const useMaterialStore = create<MaterialStore>((set, get) => ({
         id: generateId(),
       }));
       set((state) => ({
-        courseInfo: { ...state.courseInfo, ...courseInfo },
         materials: [...state.materials, ...newMaterials],
+        selectedIds: [],
+        highlightedIds: [],
+        filters: resetFilters,
       }));
       return {
         importedCount: newMaterials.length,
