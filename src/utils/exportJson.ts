@@ -1,15 +1,21 @@
-import type { CourseInfo, Material } from '@/types';
+import type { CourseInfo, Material, CourseTemplate } from '@/types';
 
 export interface ExportData {
   courseInfo: CourseInfo;
   materials: Material[];
+  templates: CourseTemplate[];
   exportedAt: string;
 }
 
-export function exportToJson(courseInfo: CourseInfo, materials: Material[]): void {
+export function exportToJson(
+  courseInfo: CourseInfo,
+  materials: Material[],
+  templates?: CourseTemplate[]
+): void {
   const data: ExportData = {
     courseInfo,
     materials,
+    templates: templates || [],
     exportedAt: new Date().toISOString(),
   };
 

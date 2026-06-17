@@ -16,6 +16,28 @@ export interface Material {
   stage: string;
   status: MaterialStatus;
   remark: string;
+  templateId?: string;
+}
+
+export interface TemplateMaterial {
+  name: string;
+  version: string;
+  copies: number;
+  spareCopies: number;
+  stage: string;
+  remark: string;
+}
+
+export interface CourseTemplate {
+  id: string;
+  name: string;
+  classType: string;
+  defaultStages: string[];
+  materials: TemplateMaterial[];
+  copiesRule: string;
+  remark: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Filters {
@@ -62,6 +84,7 @@ export const STATUS_COLORS: Record<MaterialStatus, string> = {
 export interface ImportedData {
   courseInfo: CourseInfo;
   materials: Material[];
+  templates?: CourseTemplate[];
   exportedAt: string;
 }
 

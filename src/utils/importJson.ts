@@ -5,8 +5,71 @@ import type {
   ImportedData,
   DuplicateCheckResult,
   ImportPreviewStats,
+  CourseTemplate,
+  TemplateMaterial,
 } from '@/types';
 import { generateId } from './idGenerator';
+
+function parseTemplateMaterial(item: unknown): TemplateMaterial | null {
+  if (!item || typeof item !== 'object' || Array.isArray(item)) {
+    return null;
+  }
+  const m = item as Record<string, unknown>;
+
+  const name = typeof m.name === 'string' ? m.name.trim() : '';
+  if (!name) return null;
+
+  return {
+    name,
+    version: typeof m.version === 'string' ? m.version.trim() : '',
+    copies: typeof m.copies === 'number' && m.copies >= 0 ? m.copies : 0,
+    spareCopies: typeof m.spareCopies === 'number' && m.spareCopies >= 0 ? m.spareCopies : 0,
+    stage: typeof m.stage === 'string' ? m.stage.trim() : '',
+    remark: typeof m.remark === 'string' ? m.remark : '',
+  };
+}
+
+function parseTemplates(templatesData: unknown): CourseTemplate[] {
+  if (!Array.isArray(templatesData)) return [];
+
+  const validTemplates: CourseTemplate[] = [];
+
+  templatesData.forEach((item) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      return;
+    }
+    const t = item as Record<string, unknown>;
+
+    const name = typeof t.name === 'string' ? t.name.trim() : '';
+    if (!name) return;
+
+    const materials = Array.isArray(t.materials)
+      ? t.materials
+          .map((m) => parseTemplateMaterial(m))
+          .filter((m): m is TemplateMaterial => m !== null)
+      : [];
+
+    const defaultStages = Array.isArray(t.defaultStages)
+      ? t.defaultStages.filter((s): s is string => typeof s === 'string')
+      : [];
+
+    const now = new Date().toISOString();
+
+    validTemplates.push({
+      id: typeof t.id === 'string' && t.id.trim() ? t.id : generateId(),
+      name,
+      classType: typeof t.classType === 'string' ? t.classType.trim() : '',
+      defaultStages,
+      materials,
+      copiesRule: typeof t.copiesRule === 'string' ? t.copiesRule.trim() : '',
+      remark: typeof t.remark === 'string' ? t.remark : '',
+      createdAt: typeof t.createdAt === 'string' && t.createdAt.trim() ? t.createdAt : now,
+      updatedAt: typeof t.updatedAt === 'string' && t.updatedAt.trim() ? t.updatedAt : now,
+    });
+  });
+
+  return validTemplates;
+}
 
 export function parseImportedJson(jsonString: string): ImportedData {
   let data: unknown;
@@ -63,6 +126,7 @@ export function parseImportedJson(jsonString: string): ImportedData {
     }
 
     const rawStatus = typeof m.status === 'string' ? m.status : '';
+    const templateId = typeof m.templateId === 'string' && m.templateId.trim() ? m.templateId : undefined;
 
     validMaterials.push({
       id: typeof m.id === 'string' && m.id.trim() ? m.id : generateId(),
@@ -73,6 +137,7 @@ export function parseImportedJson(jsonString: string): ImportedData {
       stage,
       status: validStatuses.includes(rawStatus) ? (rawStatus as MaterialStatus) : 'pending',
       remark: typeof m.remark === 'string' ? m.remark : '',
+      templateId,
     });
   });
 
@@ -89,9 +154,12 @@ export function parseImportedJson(jsonString: string): ImportedData {
     );
   }
 
+  const templates = parseTemplates(root.templates);
+
   return {
     courseInfo,
     materials: validMaterials,
+    templates: templates.length > 0 ? templates : undefined,
     exportedAt: typeof root.exportedAt === 'string' && root.exportedAt.trim() ? root.exportedAt : new Date().toISOString(),
   };
 }

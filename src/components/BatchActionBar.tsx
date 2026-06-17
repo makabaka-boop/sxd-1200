@@ -10,10 +10,12 @@ import {
   RefreshCw,
   AlertCircle,
   FileJson,
+  Layers,
 } from 'lucide-react';
 import { useMaterialStore } from '@/store/useMaterialStore';
 import { exportToJson } from '@/utils/exportJson';
 import type { MaterialStatus } from '@/types';
+import { CreateTemplateModal } from './CreateTemplateModal';
 
 interface BatchActionBarProps {
   onAdd: () => void;
@@ -24,6 +26,7 @@ export function BatchActionBar({ onAdd }: BatchActionBarProps) {
     selectedIds,
     materials,
     courseInfo,
+    templates,
     previousCourseMaterials,
     batchUpdateStatus,
     batchAdjustCopies,
@@ -32,6 +35,8 @@ export function BatchActionBar({ onAdd }: BatchActionBarProps) {
     saveAsPrevious,
     clearSelection,
   } = useMaterialStore();
+
+  const [showCreateTemplate, setShowCreateTemplate] = useState(false);
 
   const [showCopiesInput, setShowCopiesInput] = useState(false);
   const [copiesDelta, setCopiesDelta] = useState(1);
@@ -57,7 +62,7 @@ export function BatchActionBar({ onAdd }: BatchActionBarProps) {
   };
 
   const handleExport = () => {
-    exportToJson(courseInfo, materials);
+    exportToJson(courseInfo, materials, templates);
   };
 
   const handleSaveAsPrevious = () => {
@@ -195,6 +200,16 @@ export function BatchActionBar({ onAdd }: BatchActionBarProps) {
         <div className="h-6 w-px bg-slate-200 mx-1" />
 
         <button
+          onClick={() => setShowCreateTemplate(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors bg-violet-50 border border-violet-200 text-violet-700 hover:bg-violet-100"
+        >
+          <Layers className="w-4 h-4" />
+          生成模板
+        </button>
+
+        <div className="h-6 w-px bg-slate-200 mx-1" />
+
+        <button
           onClick={handleExport}
           className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100"
         >
@@ -202,6 +217,12 @@ export function BatchActionBar({ onAdd }: BatchActionBarProps) {
           导出 JSON
         </button>
       </div>
+
+      {showCreateTemplate && (
+        <CreateTemplateModal
+          onClose={() => setShowCreateTemplate(false)}
+        />
+      )}
     </div>
   );
 }

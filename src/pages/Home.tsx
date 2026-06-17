@@ -23,7 +23,7 @@ import { parseImportedJson } from '@/utils/importJson';
 import type { Material, ImportedData } from '@/types';
 
 export default function Home() {
-  const { view, setView, materials, courseInfo } = useMaterialStore();
+  const { view, setView, materials, courseInfo, templates } = useMaterialStore();
   const { hasErrors, hasWarnings, checkResults } = useMaterialChecks(
     materials,
     courseInfo
@@ -53,7 +53,7 @@ export default function Home() {
   };
 
   const handleExport = () => {
-    exportToJson(courseInfo, materials);
+    exportToJson(courseInfo, materials, templates);
   };
 
   const handleImportClick = () => {
@@ -224,6 +224,7 @@ export default function Home() {
         <ImportPreview
           importedCourseInfo={importedData.courseInfo}
           importedMaterials={importedData.materials}
+          importedTemplates={importedData.templates}
           exportedAt={importedData.exportedAt}
           fileName={importedFileName}
           onClose={handleCloseImportPreview}

@@ -12,8 +12,9 @@ import {
   Calendar,
   Users,
   Hash,
+  Layers,
 } from 'lucide-react';
-import type { CourseInfo, Material, ImportMode, ImportPreviewStats } from '@/types';
+import type { CourseInfo, Material, ImportMode, ImportPreviewStats, CourseTemplate } from '@/types';
 import { STATUS_LABELS, STATUS_COLORS } from '@/types';
 import { useMaterialStore } from '@/store/useMaterialStore';
 import { calculateImportStats, formatDateTime } from '@/utils/importJson';
@@ -21,6 +22,7 @@ import { calculateImportStats, formatDateTime } from '@/utils/importJson';
 interface ImportPreviewProps {
   importedCourseInfo: CourseInfo;
   importedMaterials: Material[];
+  importedTemplates?: CourseTemplate[];
   exportedAt: string;
   fileName: string;
   onClose: () => void;
@@ -30,13 +32,15 @@ interface ImportPreviewProps {
 export function ImportPreview({
   importedCourseInfo,
   importedMaterials,
+  importedTemplates,
   exportedAt,
   fileName,
   onClose,
   onSuccess,
 }: ImportPreviewProps) {
-  const { materials: currentMaterials, importMaterials } = useMaterialStore();
+  const { materials: currentMaterials, templates: currentTemplates, importMaterials, setTemplates } = useMaterialStore();
   const [importMode, setImportMode] = useState<ImportMode>('overwrite');
+  const [importTemplates, setImportTemplates] = useState(true);
 
   const stats: ImportPreviewStats = useMemo(
     () => calculateImportStats(importedMaterials, currentMaterials, importMode === 'append'),
@@ -46,14 +50,37 @@ export function ImportPreview({
   const handleConfirm = () => {
     const result = importMaterials(importedCourseInfo, importedMaterials, importMode);
 
+    if (importTemplates && importedTemplates && importedTemplates.length > 0) {
+      if (importMode === 'overwrite') {
+        setTemplates([...importedTemplates]);
+      } else {
+        const existingIds = new Set(currentTemplates.map((t) => t.id));
+        const newTemplates = importedTemplates.filter((t) => !existingIds.has(t.id));
+        if (newTemplates.length > 0) {
+          setTemplates([...currentTemplates, ...newTemplates]);
+        }
+      }
+    }
+
     let message = '';
     if (result.mode === 'overwrite') {
       message = `已覆盖导入 ${result.importedCount} 项资料`;
+      if (importTemplates && importedTemplates && importedTemplates.length > 0) {
+        message += `，${importedTemplates.length} 个模板`;
+      }
     } else {
       if (result.skippedCount > 0) {
         message = `已追加导入 ${result.importedCount} 项资料，跳过 ${result.skippedCount} 项重复资料`;
       } else {
         message = `已追加导入 ${result.importedCount} 项资料`;
+      }
+      if (importTemplates && importedTemplates && importedTemplates.length > 0) {
+        const newTplCount = importedTemplates.filter(
+          (t) => !currentTemplates.some((ct) => ct.id === t.id)
+        ).length;
+        if (newTplCount > 0) {
+          message += `，新增 ${newTplCount} 个模板`;
+        }
       }
     }
     onSuccess(message);
@@ -161,6 +188,48 @@ export function ImportPreview({
               ))}
             </div>
           </div>
+
+          {importedTemplates && importedTemplates.length > 0 && (
+            <div className="bg-violet-50 rounded-xl p-4 border border-violet-200">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-semibold text-violet-700 flex items-center gap-2">
+                  <Layers className="w-4 h-4" />
+                  包含 {importedTemplates.length} 个资料包模板
+                </h4>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={importTemplates}
+                    onChange={(e) => setImportTemplates(e.target.checked)}
+                    className="w-4 h-4 rounded border-violet-300 text-violet-600 focus:ring-violet-500"
+                  />
+                  <span className="text-sm text-violet-600">导入模板</span>
+                </label>
+              </div>
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {importedTemplates.map((template) => (
+                  <div
+                    key={template.id}
+                    className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-violet-100"
+                  >
+                    <div>
+                      <span className="text-sm font-medium text-slate-800">
+                        {template.name}
+                      </span>
+                      {template.classType && (
+                        <span className="text-xs text-slate-500 ml-2">
+                          {template.classType}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs text-slate-500">
+                      {template.materials.length} 项资料
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div>
             <h4 className="text-sm font-semibold text-slate-700 mb-3">选择导入方式</h4>

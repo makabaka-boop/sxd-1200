@@ -5,9 +5,12 @@ import type {
   MaterialStatus,
   Filters,
   ImportMode,
+  CourseTemplate,
+  TemplateMaterial,
 } from '@/types';
 import { generateId } from '@/utils/idGenerator';
 import { checkDuplicates } from '@/utils/importJson';
+import { STAGES } from '@/types';
 
 interface ImportResult {
   importedCount: number;
@@ -22,8 +25,10 @@ interface MaterialStore {
   highlightedIds: string[];
   filters: Filters;
   previousCourseMaterials: Material[];
+  templates: CourseTemplate[];
   view: 'list' | 'checklist';
   hasCopiedFromPrevious: boolean;
+  appliedTemplateId: string | null;
 
   setCourseInfo: (info: Partial<CourseInfo>) => void;
   addMaterial: (material: Omit<Material, 'id'>) => void;
@@ -47,6 +52,14 @@ interface MaterialStore {
     materials: Material[],
     mode: ImportMode
   ) => ImportResult;
+
+  createTemplate: (template: Omit<CourseTemplate, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  updateTemplate: (id: string, updates: Partial<CourseTemplate>) => void;
+  deleteTemplate: (id: string) => void;
+  applyTemplate: (templateId: string) => void;
+  setAppliedTemplateId: (id: string | null) => void;
+  setTemplates: (templates: CourseTemplate[]) => void;
+  createTemplateFromCurrent: (name: string, classType: string, copiesRule: string, remark: string) => void;
 }
 
 const today = new Date().toISOString().split('T')[0];
@@ -123,8 +136,10 @@ export const useMaterialStore = create<MaterialStore>((set, get) => ({
     checkType: '',
   },
   previousCourseMaterials: [],
+  templates: [],
   view: 'list',
   hasCopiedFromPrevious: false,
+  appliedTemplateId: null,
 
   setCourseInfo: (info) =>
     set((state) => ({
@@ -293,5 +308,118 @@ export const useMaterialStore = create<MaterialStore>((set, get) => ({
         mode,
       };
     }
+  },
+
+  createTemplate: (template) => {
+    const now = new Date().toISOString();
+    const newTemplate: CourseTemplate = {
+      ...template,
+      id: generateId(),
+      createdAt: now,
+      updatedAt: now,
+    };
+    set((state) => ({
+      templates: [...state.templates, newTemplate],
+    }));
+  },
+
+  updateTemplate: (id, updates) => {
+    set((state) => ({
+      templates: state.templates.map((t) =>
+        t.id === id
+          ? { ...t, ...updates, updatedAt: new Date().toISOString() }
+          : t
+      ),
+    }));
+  },
+
+  deleteTemplate: (id) => {
+    set((state) => ({
+      templates: state.templates.filter((t) => t.id !== id),
+      appliedTemplateId: state.appliedTemplateId === id ? null : state.appliedTemplateId,
+    }));
+  },
+
+  applyTemplate: (templateId) => {
+    const { templates, materials } = get();
+    const template = templates.find((t) => t.id === templateId);
+    if (!template) return;
+
+    const existingKeys = new Set(
+      materials.map((m) => `${m.name}-${m.version}-${m.stage}`)
+    );
+
+    const newMaterials: Material[] = template.materials
+      .filter((m) => !existingKeys.has(`${m.name}-${m.version}-${m.stage}`))
+      .map((m) => ({
+        ...m,
+        id: generateId(),
+        status: 'pending' as MaterialStatus,
+        templateId: templateId,
+      }));
+
+    if (newMaterials.length === 0 && materials.length > 0) {
+      alert('所有模板资料已存在，无需重复添加。');
+      return;
+    }
+
+    const skipped = template.materials.length - newMaterials.length;
+    if (skipped > 0 && materials.length > 0) {
+      alert(`已跳过 ${skipped} 项重复资料，成功套用 ${newMaterials.length} 项。`);
+    }
+
+    set((state) => ({
+      materials:
+        materials.length === 0
+          ? newMaterials
+          : [...state.materials, ...newMaterials],
+      appliedTemplateId: templateId,
+    }));
+  },
+
+  setAppliedTemplateId: (id) => set({ appliedTemplateId: id }),
+
+  setTemplates: (templates) => set({ templates }),
+
+  createTemplateFromCurrent: (name, classType, copiesRule, remark) => {
+    const { materials } = get();
+    const activeMaterials = materials.filter((m) => m.status !== 'cancelled');
+
+    if (activeMaterials.length === 0) {
+      alert('当前没有可用的资料，无法生成模板。');
+      return;
+    }
+
+    const stages = [...new Set(activeMaterials.map((m) => m.stage))].filter(
+      (s) => STAGES.includes(s)
+    );
+
+    const templateMaterials: TemplateMaterial[] = activeMaterials.map((m) => ({
+      name: m.name,
+      version: m.version,
+      copies: m.copies,
+      spareCopies: m.spareCopies,
+      stage: m.stage,
+      remark: m.remark,
+    }));
+
+    const now = new Date().toISOString();
+    const newTemplate: CourseTemplate = {
+      id: generateId(),
+      name,
+      classType,
+      defaultStages: stages,
+      materials: templateMaterials,
+      copiesRule,
+      remark,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    set((state) => ({
+      templates: [...state.templates, newTemplate],
+    }));
+
+    alert(`模板"${name}"已创建成功！`);
   },
 }));
