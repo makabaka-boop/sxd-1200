@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import { useMaterialStore } from '@/store/useMaterialStore';
 import { exportToJson } from '@/utils/exportJson';
-import { STATUS_LABELS } from '@/types';
 import type { MaterialStatus } from '@/types';
 
 interface BatchActionBarProps {

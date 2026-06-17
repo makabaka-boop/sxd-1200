@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Edit2, Trash2, ChevronUp, ChevronDown, AlertCircle } from 'lucide-react';
 import { useMaterialStore } from '@/store/useMaterialStore';
 import { useFilteredMaterials } from '@/hooks/useFilteredMaterials';

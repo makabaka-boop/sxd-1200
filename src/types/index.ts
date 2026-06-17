@@ -58,3 +58,24 @@ export const STATUS_COLORS: Record<MaterialStatus, string> = {
   reprint: 'bg-rose-100 text-rose-800 border-rose-200',
   cancelled: 'bg-slate-200 text-slate-600 border-slate-300',
 };
+
+export interface ImportedData {
+  courseInfo: CourseInfo;
+  materials: Material[];
+  exportedAt: string;
+}
+
+export interface DuplicateCheckResult {
+  duplicates: Material[];
+  nonDuplicates: Material[];
+  duplicateCount: number;
+}
+
+export interface ImportPreviewStats {
+  materialCount: number;
+  statusCounts: Record<MaterialStatus, number>;
+  duplicateCount: number;
+  willBeImportedCount: number;
+}
+
+export type ImportMode = 'overwrite' | 'append';

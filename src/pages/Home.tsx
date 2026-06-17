@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   Package,
   ListTodo,
   ClipboardCheck,
   FileJson,
   AlertTriangle,
+  Upload,
+  CheckCircle,
 } from 'lucide-react';
 import { useMaterialStore } from '@/store/useMaterialStore';
 import { useMaterialChecks } from '@/hooks/useMaterialChecks';
@@ -15,8 +17,10 @@ import { MaterialForm } from '@/components/MaterialForm';
 import { BatchActionBar } from '@/components/BatchActionBar';
 import { AlertPanel } from '@/components/AlertPanel';
 import { ChecklistView } from '@/components/ChecklistView';
+import { ImportPreview } from '@/components/ImportPreview';
 import { exportToJson } from '@/utils/exportJson';
-import type { Material } from '@/types';
+import { parseImportedJson } from '@/utils/importJson';
+import type { Material, ImportedData } from '@/types';
 
 export default function Home() {
   const { view, setView, materials, courseInfo } = useMaterialStore();
@@ -27,6 +31,11 @@ export default function Home() {
 
   const [showForm, setShowForm] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
+  const [showImportPreview, setShowImportPreview] = useState(false);
+  const [importedData, setImportedData] = useState<ImportedData | null>(null);
+  const [importedFileName, setImportedFileName] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAdd = () => {
     setEditingMaterial(null);
@@ -47,10 +56,60 @@ export default function Home() {
     exportToJson(courseInfo, materials);
   };
 
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.json')) {
+      alert('请选择 JSON 格式的文件');
+      e.target.value = '';
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      const parsed = parseImportedJson(text);
+      setImportedData(parsed);
+      setImportedFileName(file.name);
+      setShowImportPreview(true);
+    } catch (error) {
+      alert(
+        `文件解析失败：${error instanceof Error ? error.message : '未知错误'}`
+      );
+    } finally {
+      e.target.value = '';
+    }
+  };
+
+  const handleImportSuccess = (message: string) => {
+    setShowImportPreview(false);
+    setImportedData(null);
+    setSuccessMessage(message);
+    setTimeout(() => setSuccessMessage(''), 4000);
+  };
+
+  const handleCloseImportPreview = () => {
+    setShowImportPreview(false);
+    setImportedData(null);
+  };
+
   const totalIssues = checkResults.length;
 
   return (
     <div className="min-h-screen bg-slate-50">
+      {successMessage && (
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-xl shadow-lg animate-fade-in">
+          <CheckCircle className="w-5 h-5 text-emerald-500" />
+          <span className="text-sm font-medium text-emerald-700">
+            {successMessage}
+          </span>
+        </div>
+      )}
+
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -98,6 +157,13 @@ export default function Home() {
               </div>
 
               <button
+                onClick={handleImportClick}
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-sky-700 bg-sky-50 rounded-lg hover:bg-sky-100 transition-colors border border-sky-200"
+              >
+                <Upload className="w-4 h-4" />
+                导入
+              </button>
+              <button
                 onClick={handleExport}
                 className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-amber-700 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors border border-amber-200"
               >
@@ -105,6 +171,14 @@ export default function Home() {
                 导出
               </button>
             </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json,application/json"
+              onChange={handleFileChange}
+              className="hidden"
+            />
           </div>
         </div>
       </header>
@@ -143,6 +217,17 @@ export default function Home() {
 
       {showForm && (
         <MaterialForm material={editingMaterial} onClose={handleCloseForm} />
+      )}
+
+      {showImportPreview && importedData && (
+        <ImportPreview
+          importedCourseInfo={importedData.courseInfo}
+          importedMaterials={importedData.materials}
+          exportedAt={importedData.exportedAt}
+          fileName={importedFileName}
+          onClose={handleCloseImportPreview}
+          onSuccess={handleImportSuccess}
+        />
       )}
     </div>
   );

@@ -1,6 +1,19 @@
 import { create } from 'zustand';
-import type { CourseInfo, Material, MaterialStatus, Filters, CheckType } from '@/types';
+import type {
+  CourseInfo,
+  Material,
+  MaterialStatus,
+  Filters,
+  ImportMode,
+} from '@/types';
 import { generateId } from '@/utils/idGenerator';
+import { checkDuplicates } from '@/utils/importJson';
+
+interface ImportResult {
+  importedCount: number;
+  skippedCount: number;
+  mode: ImportMode;
+}
 
 interface MaterialStore {
   courseInfo: CourseInfo;
@@ -29,6 +42,11 @@ interface MaterialStore {
   saveAsPrevious: () => void;
   setView: (view: 'list' | 'checklist') => void;
   resetHasCopiedFlag: () => void;
+  importMaterials: (
+    courseInfo: CourseInfo,
+    materials: Material[],
+    mode: ImportMode
+  ) => ImportResult;
 }
 
 const today = new Date().toISOString().split('T')[0];
@@ -225,4 +243,43 @@ export const useMaterialStore = create<MaterialStore>((set, get) => ({
   setView: (view) => set({ view }),
 
   resetHasCopiedFlag: () => set({ hasCopiedFromPrevious: false }),
+
+  importMaterials: (courseInfo, materials, mode) => {
+    if (mode === 'overwrite') {
+      const newMaterials = materials.map((m) => ({
+        ...m,
+        id: generateId(),
+      }));
+      set({
+        courseInfo: { ...courseInfo },
+        materials: newMaterials,
+        selectedIds: [],
+        highlightedIds: [],
+      });
+      return {
+        importedCount: newMaterials.length,
+        skippedCount: 0,
+        mode,
+      };
+    } else {
+      const { materials: currentMaterials } = get();
+      const { nonDuplicates, duplicateCount } = checkDuplicates(
+        materials,
+        currentMaterials
+      );
+      const newMaterials = nonDuplicates.map((m) => ({
+        ...m,
+        id: generateId(),
+      }));
+      set((state) => ({
+        courseInfo: { ...state.courseInfo, ...courseInfo },
+        materials: [...state.materials, ...newMaterials],
+      }));
+      return {
+        importedCount: newMaterials.length,
+        skippedCount: duplicateCount,
+        mode,
+      };
+    }
+  },
 }));

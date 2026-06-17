@@ -1,15 +1,8 @@
-import { Search, Filter, AlertTriangle, Copy, Layers, FileText, MessageSquare } from 'lucide-react';
+import { Search, Filter, AlertTriangle } from 'lucide-react';
 import { useMaterialStore } from '@/store/useMaterialStore';
 import { STAGES, STATUS_LABELS, CHECK_TYPE_LABELS } from '@/types';
 import type { MaterialStatus, CheckType } from '@/types';
 import { useMaterialChecks } from '@/hooks/useMaterialChecks';
-
-const checkTypeIcons: Record<CheckType, React.ReactNode> = {
-  copies: <Copy className="w-4 h-4" />,
-  version: <Layers className="w-4 h-4" />,
-  duplicate: <FileText className="w-4 h-4" />,
-  remark: <MessageSquare className="w-4 h-4" />,
-};
 
 export function FilterBar() {
   const { filters, setFilters, materials, courseInfo, clearHighlightedIds } = useMaterialStore();

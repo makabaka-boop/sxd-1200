@@ -36,14 +36,14 @@ export function AlertPanel() {
     setHighlightedIds,
     setView,
   } = useMaterialStore();
-  const { checkResults, hasErrors, hasWarnings } = useMaterialChecks(
+  const { checkResults, hasErrors } = useMaterialChecks(
     materials,
     courseInfo
   );
 
   const [isExpanded, setIsExpanded] = useState(true);
 
-  const handleJumpTo = (materialIds: string[], checkType: string) => {
+  const handleJumpTo = (materialIds: string[], checkType: CheckType) => {
     clearSelection();
     setView('list');
     setFilters({
@@ -52,7 +52,7 @@ export function AlertPanel() {
       stage: '',
       status: '',
       version: '',
-      checkType: checkType as any,
+      checkType,
     });
     setHighlightedIds(materialIds);
 
